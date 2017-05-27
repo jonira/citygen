@@ -1,0 +1,31 @@
+{
+  "name": "citygen",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Joni Rajanen",
+  "license": "All rights reserved",
+  "dependencies": {
+    "body-parser": "^1.17.1",
+    "express": "^4.15.3",
+    "pixi.js": "^4.5.2"
+  },
+  "devDependencies": {
+    "babel-core": "^6.24.1",
+    "babel-loader": "^7.0.0",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-preset-env": "^1.4.0",
+    "extract-text-webpack-plugin": "^2.1.0",
+    "html-webpack-plugin": "^2.28.0",
+    "livereload": "^0.6.2",
+    "nodemon": "^1.11.0",
+    "webpack": "^2.4.1"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "build:watch": "webpack --config webpack.config.js --watch",
+    "livereload:app": "node --eval \"require('livereload').createServer().watch('./')\"",
+    "watch:server": "NODE_ENV=development nodemon -e js --watch server index.js",
+    "watch": "yarn build:watch & yarn watch:server & yarn livereload:app",
+    "start": "node index.js"
+  }
+}
