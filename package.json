@@ -7,6 +7,7 @@
   "dependencies": {
     "body-parser": "^1.17.1",
     "express": "^4.15.3",
+    "gaussian": "^1.1.0",
     "pixi.js": "^4.5.2",
     "ramda": "^0.24.0",
     "victor": "^1.1.0"
