@@ -4,49 +4,79 @@ import * as R from 'ramda'
 import Victor from 'victor'
 import gaussian from 'gaussian'
 
-const initVec = () => new Victor(0, 100)
+const initVec = () => ({origin: new Victor(0, 250), direction: new Victor(1, 0), roads: []})
 
 const distanceSampler = gaussian(40, 40)
 const angleSampler = gaussian(0, 295)
 
 const nextPoint = (distanceDist, angleDist, lastV) => {
-  const unit = new Victor(1, 0)
   const dev = angleDist.ppf(Math.random())
   const scale = distanceDist.ppf(Math.random())
-  return lastV.clone().add(unit.rotateByDeg(dev).multiply(new Victor(scale, scale)))
+
+  const origin = lastV.origin.clone().add(lastV.direction.clone().rotateByDeg(dev).multiply(new Victor(scale, scale)))
+  const direction = lastV.direction.clone()
+  const ro = distanceDist.ppf(Math.random())
+  const rd = angleDist.ppf(Math.random())
+  if ((ro < scale) && (rd > dev)) {
+    console.log('fork')
+    return {
+      origin,
+      direction,
+      roads: [{
+        origin: lastV.origin.clone().add(lastV.direction.clone().rotateByDeg(dev).multiply(new Victor(ro, ro))),
+        direction: direction.clone().rotateDeg(45.0),
+        roads: []
+      }]
+    }
+  }
+  return {origin, direction, roads: []}
 }
 
-const buildRoad = (graph, start, distanceDistribution, angleDistribution) => {
-  const segmentCount = 50
+const buildRoad = (stage, start, segments, distanceDistribution, angleDistribution) => {
   const thickness = 3
   const points = R.until(
     R.pipe(
       R.length,
-      R.gt(R.__, segmentCount))
+      R.gt(R.__, segments))
     , arr => R.pipe(
       R.last,
       R.partial(nextPoint, [distanceDistribution, angleDistribution]),
       R.append(R.__, arr)
-    )(arr))([startP])
+    )(arr))([start])
 
-  graph.position.set(startP.x, startP.y)
+  if (segments < 1) return
+  let graph = new PIXI.Graphics()
+  stage.addChild(graph)
+
+  // console.log("points", points)
+  console.log('start pos', start.origin)
+
+  graph.position.set(0, 0)
   graph.lineStyle(thickness, 0xffffff)
-    .moveTo(0, 0)
+    .moveTo(start.origin.x, start.origin.y)
   R.pipe(
-    R.map(p =>
-      graph.lineTo(p.x, p.y)))(points)
+    R.reject(p => p.x < 0 || p.y < 0),
+    R.tail,
+    R.map(
+      p => {
+        console.log('draw', p.origin)
+        graph.lineTo(p.origin.x, p.origin.y)
+      }))(points)
+
+  R.map(
+    R.pipe(
+      R.prop('roads'),
+      R.map(road => buildRoad(stage, road, segments / 3, distanceDistribution, angleDistribution)))
+  )(points)
 }
 
 var app = new PIXI.Application()
 
 document.body.appendChild(app.view)
 
-let myGraph = new PIXI.Graphics()
-app.stage.addChild(myGraph)
-
 const startP = initVec()
 
-buildRoad(myGraph, startP, distanceSampler, angleSampler)
+buildRoad(app.stage, startP, 20, distanceSampler, angleSampler)
 
 
 
