@@ -3,11 +3,9 @@ import * as R from 'ramda'
 
 import Victor from 'victor'
 import gaussian from 'gaussian'
+const mapIndexed = R.addIndex(R.map)
 
 const initVec = () => ({origin: new Victor(0, 250), direction: new Victor(1, 0), roads: []})
-
-const distanceSampler = gaussian(40, 40)
-const angleSampler = gaussian(0, 295)
 
 const nextPoint = (distanceDist, angleDist, lastV) => {
   const dev = angleDist.ppf(Math.random())
@@ -37,7 +35,7 @@ const buildRoad = (stage, start, segments, distanceDistribution, angleDistributi
   const points = R.until(
     R.pipe(
       R.length,
-      R.gt(R.__, segments))
+      R.gte(R.__, segments))
     , arr => R.pipe(
       R.last,
       R.partial(nextPoint, [distanceDistribution, angleDistribution]),
@@ -62,13 +60,43 @@ const buildRoad = (stage, start, segments, distanceDistribution, angleDistributi
   )(points)
 
   // sub roads
-  R.map(
+  const subPoints = R.map(
     R.pipe(
       R.prop('roads'),
       R.map(road => buildRoad(stage, road, segments / 2.5, distanceDistribution, angleDistribution)))
   )(points)
 
+  // console.log("sub points", subPoints)
+  mapIndexed((r, i) => points[i].roads = r)(subPoints)
+
   return points
+}
+
+const buildHousing = (stage, houses, roads = []) => {
+  const segment = R.take(2, roads)
+  if (R.lte(segment.length, 1)) return [] // no houses for one piece segmend, i.e. end of road
+
+  const rnd = Math.random()
+  const side = Math.sign(Math.random() - .5)
+  const svec = segment[1].origin.clone().subtract(segment[0].origin.clone())
+  const hvec = svec.multiply(new Victor(rnd, rnd))
+  const offset = svec.clone().normalize().rotateDeg(side * 90).multiply(new Victor(20, 20))
+  const building_vec = segment[0].origin.clone().add(hvec).add(offset)
+  houses.push(building_vec)
+
+  const graphics = new PIXI.Graphics()
+
+  graphics.beginFill(0xFFFFFF)
+  graphics.lineStyle(5, 0xFFFFFF)
+  graphics.position.set(0, 0)
+  graphics.drawRect(building_vec.x, building_vec.y, 5, 5)
+
+  stage.addChild(graphics)
+
+  if (segment[0].roads.length > 0) { // iterate sub roads
+    R.until(R.isEmpty, R.partial(buildHousing, [stage, houses]))(segment[0].roads[0]) // issue: last segment never gets iterated
+  }
+  return R.drop(1, roads)
 }
 
 var app = new PIXI.Application()
@@ -76,8 +104,20 @@ var app = new PIXI.Application()
 document.body.appendChild(app.view)
 
 const startP = initVec()
+const distanceSampler = gaussian(40, 40)
+const angleSampler = gaussian(0, 295)
 
-buildRoad(app.stage, startP, 20, distanceSampler, angleSampler)
+const roads = buildRoad(app.stage, startP, 20, distanceSampler, angleSampler)
+
+console.log('roads', roads)
+
+let houses = []
+R.until(R.isEmpty, R.partial(buildHousing, [app.stage, houses]))(roads)
+
+console.log('houses', houses)
+
+// const houses = buildHousing(app.stage, roads)
+
 
 
 
