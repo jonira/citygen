@@ -17,14 +17,14 @@ const nextPoint = (distanceDist, angleDist, lastV) => {
   const direction = lastV.direction.clone()
   const ro = distanceDist.ppf(Math.random())
   const rd = angleDist.ppf(Math.random())
-  if ((ro < scale) && (rd > dev)) {
-    console.log('fork')
+  if ((ro < scale) && (rd > dev)) { // heuristics to form a sub road
+    const side = Math.sign(Math.random() - .5)
     return {
       origin,
       direction,
       roads: [{
         origin: lastV.origin.clone().add(lastV.direction.clone().rotateByDeg(dev).multiply(new Victor(ro, ro))),
-        direction: direction.clone().rotateDeg(45.0),
+        direction: direction.clone().rotateDeg(side * 45.0),
         roads: []
       }]
     }
@@ -48,8 +48,7 @@ const buildRoad = (stage, start, segments, distanceDistribution, angleDistributi
   let graph = new PIXI.Graphics()
   stage.addChild(graph)
 
-  // console.log("points", points)
-  console.log('start pos', start.origin)
+  // drawing
 
   graph.position.set(0, 0)
   graph.lineStyle(thickness, 0xffffff)
@@ -58,16 +57,18 @@ const buildRoad = (stage, start, segments, distanceDistribution, angleDistributi
     R.reject(p => p.x < 0 || p.y < 0),
     R.tail,
     R.map(
-      p => {
-        console.log('draw', p.origin)
-        graph.lineTo(p.origin.x, p.origin.y)
-      }))(points)
+      p => graph.lineTo(p.origin.x, p.origin.y)
+    )
+  )(points)
 
+  // sub roads
   R.map(
     R.pipe(
       R.prop('roads'),
-      R.map(road => buildRoad(stage, road, segments / 3, distanceDistribution, angleDistribution)))
+      R.map(road => buildRoad(stage, road, segments / 2.5, distanceDistribution, angleDistribution)))
   )(points)
+
+  return points
 }
 
 var app = new PIXI.Application()
