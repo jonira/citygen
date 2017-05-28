@@ -66,10 +66,34 @@ const buildRoad = (stage, start, segments, distanceDistribution, angleDistributi
       R.map(road => buildRoad(stage, road, segments / 2.5, distanceDistribution, angleDistribution)))
   )(points)
 
-  // console.log("sub points", subPoints)
   mapIndexed((r, i) => points[i].roads = r)(subPoints)
 
   return points
+}
+
+const buildHouse = (stage, point, vec) => {
+  const distribution = gaussian(10, 10)
+  const h = distribution.ppf(Math.random()), w = distribution.ppf(Math.random())
+  const bh = vec.clone().normalize().multiply(new Victor(h, h))
+  const bw = vec.clone().normalize().rotateDeg(90).multiply(new Victor(w, w))
+  const c1 = point.clone().add(bh.clone())
+  const c2 = c1.clone().add(bw.clone())
+  const c3 = c2.clone().add(bh.clone().invert())
+  const c4 = c3.clone().add(bw.clone().invert())
+
+  // drawing
+  let graph = new PIXI.Graphics()
+  stage.addChild(graph)
+  graph.beginFill(0xFFFFFF)
+
+  graph.position.set(0, 0)
+  graph.lineStyle(5, 0xffffff)
+    graph.moveTo(c1.x, c1.y)
+    graph.lineTo(c2.x, c2.y)
+    graph.lineTo(c3.x, c3.y)
+    graph.lineTo(c4.x, c4.y)
+
+  return [c1, c2, c3, c4]
 }
 
 const buildHousing = (stage, houses, roads = []) => {
@@ -84,14 +108,7 @@ const buildHousing = (stage, houses, roads = []) => {
   const building_vec = segment[0].origin.clone().add(hvec).add(offset)
   houses.push(building_vec)
 
-  const graphics = new PIXI.Graphics()
-
-  graphics.beginFill(0xFFFFFF)
-  graphics.lineStyle(5, 0xFFFFFF)
-  graphics.position.set(0, 0)
-  graphics.drawRect(building_vec.x, building_vec.y, 5, 5)
-
-  stage.addChild(graphics)
+  buildHouse(stage, building_vec.clone(), offset.clone())
 
   if (segment[0].roads.length > 0) { // iterate sub roads
     R.until(R.isEmpty, R.partial(buildHousing, [stage, houses]))(segment[0].roads[0]) // issue: last segment never gets iterated
@@ -115,13 +132,3 @@ let houses = []
 R.until(R.isEmpty, R.partial(buildHousing, [app.stage, houses]))(roads)
 
 console.log('houses', houses)
-
-// const houses = buildHousing(app.stage, roads)
-
-
-
-
-
-
-
-
